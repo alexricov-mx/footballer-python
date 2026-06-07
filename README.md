@@ -6,15 +6,14 @@ Footballer es una aplicación web desarrollada en Django para la gestión integr
 
 Este proyecto sigue una metodología de **Specs-Driven Development (SDD)**. Todo el trabajo se organiza en "Incrementos", y cada incremento está documentado en su propia carpeta dentro de `docs/specs/`.
 
--   **Último Incremento Completado:** `Incremento 01: Base Administrativa`.
-    -   **Resumen:** Se ha establecido la base del proyecto, incluyendo la configuración del entorno, los modelos de datos iniciales, el panel de administración y un sistema para poblar la base de datos con datos de prueba.
-    -   **Documentación:** Puedes encontrar todos los detalles en [docs/specs/002-incremento-01-base-administrativa/](docs/specs/002-incremento-01-base-administrativa/).
+-   **Último Incremento Completado:** `Incremento 02: Participación y Plantillas`.
+    -   **Resumen:** Se han añadido las funcionalidades para gestionar la participación de los equipos en las temporadas y la composición de sus plantillas. Se ha mejorado el panel de administración para una gestión más sencilla y se han cargado datos de prueba realistas (Liga MX).
+    -   **Documentación:** Puedes encontrar todos los detalles en [docs/specs/003-incremento-02-participacion-plantillas/](docs/specs/003-incremento-02-participacion-plantillas/).
 
 ### ¿Cómo continuar el desarrollo?
 
 1.  **Revisa las Épicas Pendientes:** El trabajo a futuro está definido en los archivos de épicas que se encuentran en el directorio `Requerimiento/`.
-2.  **Elige la Siguiente Épica:** Selecciona el siguiente archivo `Epica-Features-Footballer-XX.md` que desees implementar.
-3.  **Inicia un Nuevo Incremento:** Basado en la épica seleccionada, crea una nueva carpeta de `spec` para el "Incremento 02" (por ejemplo, `docs/specs/003-incremento-02-nombre-feature/`) y comienza el ciclo de SDD (Requerimientos, Análisis, Planificación, Ejecución).
+2.  **Inicia el Siguiente Incremento:** El siguiente paso es el **Incremento 03: Gestión de Calendarios y Partidos**. La `spec` para este incremento se está comenzando a definir en `docs/specs/004-incremento-03-calendarios-partidos/`.
 
 ---
 

@@ -49,6 +49,7 @@ class Temporada(models.Model):
         return f'{self.nombre} - {self.liga.nombre}'
 
 class Equipo(models.Model):
+    federacion = models.ForeignKey(Federacion, on_delete=models.CASCADE, related_name='equipos')
     nombre = models.CharField(max_length=100, unique=True)
     activo = models.BooleanField(default=True)
     creado = models.DateTimeField(auto_now_add=True)
@@ -56,17 +57,6 @@ class Equipo(models.Model):
 
     def __str__(self):
         return self.nombre
-
-class Jugador(models.Model):
-    equipo = models.ForeignKey(Equipo, on_delete=models.CASCADE, related_name='jugadores')
-    nombre = models.CharField(max_length=100)
-    apellido = models.CharField(max_length=100)
-    activo = models.BooleanField(default=True)
-    creado = models.DateTimeField(auto_now_add=True)
-    actualizado = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f'{self.nombre} {self.apellido}'
 
 class Sede(models.Model):
     nombre = models.CharField(max_length=100)
@@ -80,3 +70,50 @@ class Sede(models.Model):
 
     def __str__(self):
         return self.nombre
+
+class Jugador(models.Model):
+    class PosicionJugador(models.TextChoices):
+        PORTERO = 'portero', 'Portero'
+        DEFENSA = 'defensa', 'Defensa'
+        MEDIOCAMPISTA = 'mediocampista', 'Mediocampista'
+        DELANTERO = 'delantero', 'Delantero'
+
+    nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100)
+    fecha_nacimiento = models.DateField(null=True)
+    posicion = models.CharField(max_length=20, choices=PosicionJugador.choices, null=True)
+    foto = models.ImageField(upload_to='jugadores/', blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.nombre} {self.apellido}'
+
+class EquipoTemporada(models.Model):
+    temporada = models.ForeignKey(Temporada, on_delete=models.CASCADE, related_name='equipos_participantes')
+    equipo = models.ForeignKey(Equipo, on_delete=models.CASCADE, related_name='participaciones')
+    sede = models.ForeignKey(Sede, on_delete=models.SET_NULL, null=True, blank=True, related_name='equipos_como_sede')
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('temporada', 'equipo')
+
+    def __str__(self):
+        return f'{self.equipo.nombre} en {self.temporada.nombre}'
+
+class PlantillaJugador(models.Model):
+    equipo_temporada = models.ForeignKey(EquipoTemporada, on_delete=models.CASCADE, related_name='plantilla')
+    jugador = models.ForeignKey(Jugador, on_delete=models.CASCADE, related_name='historial_equipos')
+    dorsal = models.PositiveIntegerField()
+    posicion_secundaria = models.CharField(max_length=20, choices=Jugador.PosicionJugador.choices, blank=True, null=True)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('equipo_temporada', 'jugador')
+        ordering = ['dorsal']
+
+    def __str__(self):
+        return f'{self.jugador} - {self.equipo_temporada.equipo.nombre} ({self.dorsal})'
