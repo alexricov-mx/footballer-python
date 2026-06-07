@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     Federacion, Liga, Temporada, Equipo, Jugador, Sede,
-    EquipoTemporada, PlantillaJugador
+    EquipoTemporada, PlantillaJugador,
+    Arbitro, Jornada, Partido  # Importar nuevos modelos
 )
 
 # Inline para la plantilla de jugadores en EquipoTemporada
@@ -34,7 +35,9 @@ class EquipoAdmin(admin.ModelAdmin):
 # Admin para Sede
 @admin.register(Sede)
 class SedeAdmin(admin.ModelAdmin):
-    search_fields = ['nombre']
+    list_display = ('nombre', 'ciudad', 'activa')
+    search_fields = ['nombre', 'ciudad']
+    list_filter = ('ciudad', 'activa')
 
 # Admin para Temporada
 @admin.register(Temporada)
@@ -53,3 +56,31 @@ class EquipoTemporadaAdmin(admin.ModelAdmin):
 # Registro de modelos simples
 admin.site.register(Federacion)
 admin.site.register(Liga)
+
+# Nuevos registros para el Incremento 3
+@admin.register(Arbitro)
+class ArbitroAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'apellido_paterno', 'fecha_nacimiento', 'activo')
+    search_fields = ('nombre', 'apellido_paterno')
+    list_filter = ('activo',)
+
+class PartidoInline(admin.TabularInline):
+    model = Partido
+    extra = 0
+    autocomplete_fields = ('equipo_local', 'equipo_visitante', 'sede', 'arbitro')
+    readonly_fields = ('estado',)
+
+@admin.register(Jornada)
+class JornadaAdmin(admin.ModelAdmin):
+    list_display = ('numero', 'temporada')
+    list_filter = ('temporada',)
+    search_fields = ('temporada__nombre',)
+    inlines = [PartidoInline]
+
+@admin.register(Partido)
+class PartidoAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'jornada', 'fecha_hora', 'estado')
+    list_filter = ('estado', 'jornada__temporada', 'jornada')
+    search_fields = ('equipo_local__equipo__nombre', 'equipo_visitante__equipo__nombre', 'jornada__temporada__nombre')
+    autocomplete_fields = ('jornada', 'equipo_local', 'equipo_visitante', 'sede', 'arbitro')
+    list_editable = ('estado',)

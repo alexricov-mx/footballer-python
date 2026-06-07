@@ -117,3 +117,51 @@ class PlantillaJugador(models.Model):
 
     def __str__(self):
         return f'{self.jugador} - {self.equipo_temporada.equipo.nombre} ({self.dorsal})'
+
+# Incremento 3: Calendarios y Partidos
+
+class Arbitro(models.Model):
+    nombre = models.CharField(max_length=100)
+    apellido_paterno = models.CharField(max_length=100)
+    apellido_materno = models.CharField(max_length=100, blank=True)
+    fecha_nacimiento = models.DateField()
+    activo = models.BooleanField(default=True)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.nombre} {self.apellido_paterno}'
+
+class Jornada(models.Model):
+    temporada = models.ForeignKey(Temporada, on_delete=models.CASCADE, related_name='jornadas')
+    numero = models.PositiveIntegerField()
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('temporada', 'numero')
+        ordering = ['numero']
+
+    def __str__(self):
+        return f'Jornada {self.numero} - {self.temporada.nombre}'
+
+class Partido(models.Model):
+    class EstadoPartido(models.TextChoices):
+        PENDIENTE = 'pendiente', 'Pendiente'
+        PROGRAMADO = 'programado', 'Programado'
+        FINALIZADO = 'finalizado', 'Finalizado'
+        CANCELADO = 'cancelado', 'Cancelado'
+        SUSPENDIDO = 'suspendido', 'Suspendido'
+
+    jornada = models.ForeignKey(Jornada, on_delete=models.CASCADE, related_name='partidos')
+    equipo_local = models.ForeignKey(EquipoTemporada, on_delete=models.CASCADE, related_name='partidos_local')
+    equipo_visitante = models.ForeignKey(EquipoTemporada, on_delete=models.CASCADE, related_name='partidos_visitante')
+    sede = models.ForeignKey(Sede, on_delete=models.PROTECT, related_name='partidos')
+    arbitro = models.ForeignKey(Arbitro, on_delete=models.SET_NULL, null=True, blank=True, related_name='partidos_arbitrados')
+    fecha_hora = models.DateTimeField()
+    estado = models.CharField(max_length=20, choices=EstadoPartido.choices, default=EstadoPartido.PENDIENTE)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.equipo_local.equipo} vs {self.equipo_visitante.equipo} - {self.jornada}'

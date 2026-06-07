@@ -6,14 +6,14 @@ Footballer es una aplicación web desarrollada en Django para la gestión integr
 
 Este proyecto sigue una metodología de **Specs-Driven Development (SDD)**. Todo el trabajo se organiza en "Incrementos", y cada incremento está documentado en su propia carpeta dentro de `docs/specs/`.
 
--   **Último Incremento Completado:** `Incremento 02: Participación y Plantillas`.
-    -   **Resumen:** Se han añadido las funcionalidades para gestionar la participación de los equipos en las temporadas y la composición de sus plantillas. Se ha mejorado el panel de administración para una gestión más sencilla y se han cargado datos de prueba realistas (Liga MX).
-    -   **Documentación:** Puedes encontrar todos los detalles en [docs/specs/003-incremento-02-participacion-plantillas/](docs/specs/003-incremento-02-participacion-plantillas/).
+-   **Último Incremento Completado:** `Incremento 03: Gestión de Calendarios y Partidos`.
+    -   **Resumen:** Se ha añadido la capacidad de gestionar árbitros, jornadas y partidos. El sistema ahora puede generar un calendario completo para una temporada, sentando las bases para el registro de resultados.
+    -   **Documentación:** Puedes encontrar todos los detalles en [docs/specs/004-incremento-03-calendarios-partidos/](docs/specs/004-incremento-03-calendarios-partidos/).
 
 ### ¿Cómo continuar el desarrollo?
 
 1.  **Revisa las Épicas Pendientes:** El trabajo a futuro está definido en los archivos de épicas que se encuentran en el directorio `Requerimiento/`.
-2.  **Inicia el Siguiente Incremento:** El siguiente paso es el **Incremento 03: Gestión de Calendarios y Partidos**. La `spec` para este incremento se está comenzando a definir en `docs/specs/004-incremento-03-calendarios-partidos/`.
+2.  **Inicia el Siguiente Incremento:** El siguiente paso es el **Incremento 04: Registro de Resultados y Eventos**. La `spec` para este incremento se comenzará a definir en `docs/specs/005-incremento-04-resultados-eventos/`.
 
 ---
 

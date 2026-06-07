@@ -1,16 +1,42 @@
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from core.models import (
     Federacion, Liga, Temporada, Equipo, Jugador, Sede,
-    EquipoTemporada, PlantillaJugador
+    EquipoTemporada, PlantillaJugador,
+    Arbitro, Jornada, Partido  # Nuevos modelos
 )
 import random
-from datetime import date
+from datetime import date, timedelta, datetime
 
 class Command(BaseCommand):
     help = 'Crea datos de prueba para la aplicación, incluyendo Liga MX y MLS.'
 
+    @transaction.atomic
     def handle(self, *args, **kwargs):
+        self._clean_db()
+        self.stdout.write("Creando datos de prueba...")
+
+        # Creación en orden de dependencia
+        federaciones = self._create_federaciones()
+        ligas = self._create_ligas(federaciones)
+        temporadas = self._create_temporadas(ligas)
+        sedes = self._create_sedes()
+        arbitros = self._create_arbitros() # Nuevo
+        equipos = self._create_equipos(federaciones)
+        jugadores = self._create_jugadores()
+        
+        equipos_temporada = self._create_equipos_temporada(temporadas, equipos, sedes)
+        self._create_plantillas(equipos_temporada, jugadores)
+        self._create_calendario(temporadas, arbitros) # Nuevo
+
+        self.stdout.write(self.style.SUCCESS('¡Datos de prueba creados exitosamente!'))
+
+    def _clean_db(self):
         self.stdout.write("Limpiando la base de datos...")
+        # Orden de eliminación inverso a la creación para respetar las dependencias
+        Partido.objects.all().delete()
+        Jornada.objects.all().delete()
+        Arbitro.objects.all().delete()
         PlantillaJugador.objects.all().delete()
         EquipoTemporada.objects.all().delete()
         Jugador.objects.all().delete()
@@ -20,107 +46,127 @@ class Command(BaseCommand):
         Liga.objects.all().delete()
         Federacion.objects.all().delete()
 
-        self.stdout.write("Creando datos de prueba...")
-
-        # 1. Federaciones
+    def _create_federaciones(self):
         self.stdout.write("Creando Federaciones...")
-        federacion_uefa = Federacion.objects.create(nombre='UEFA', activa=True)
-        federacion_conmebol = Federacion.objects.create(nombre='CONMEBOL', activa=True)
-        federacion_concacaf = Federacion.objects.create(nombre='CONCACAF', activa=True)
+        return {
+            'uefa': Federacion.objects.create(nombre='UEFA', activa=True),
+            'conmebol': Federacion.objects.create(nombre='CONMEBOL', activa=True),
+            'concacaf': Federacion.objects.create(nombre='CONCACAF', activa=True),
+        }
 
-        # 2. Ligas
+    def _create_ligas(self, federaciones):
         self.stdout.write("Creando Ligas...")
-        liga_esp = Liga.objects.create(nombre='La Liga', federacion=federacion_uefa, activa=True)
-        liga_arg = Liga.objects.create(nombre='Liga Profesional', federacion=federacion_conmebol, activa=True)
-        liga_mx = Liga.objects.create(nombre='Liga MX', federacion=federacion_concacaf, activa=True)
-        liga_mls = Liga.objects.create(nombre='MLS', federacion=federacion_concacaf, activa=True)
+        return {
+            'laliga': Liga.objects.create(nombre='La Liga', federacion=federaciones['uefa'], activa=True),
+            'arg': Liga.objects.create(nombre='Liga Profesional', federacion=federaciones['conmebol'], activa=True),
+            'mx': Liga.objects.create(nombre='Liga MX', federacion=federaciones['concacaf'], activa=True),
+            'mls': Liga.objects.create(nombre='MLS', federacion=federaciones['concacaf'], activa=True),
+        }
 
-        # 3. Temporadas
+    def _create_temporadas(self, ligas):
         self.stdout.write("Creando Temporadas...")
-        temporada_2425_laliga = Temporada.objects.create(
-            liga=liga_esp, nombre='2024-2025', estado=Temporada.EstadoTemporada.PLANEADA,
-            modalidad=Temporada.ModalidadCalendario.DOBLE_VUELTA, fecha_inicio_propuesta=date(2024, 8, 16)
-        )
-        temporada_2024_arg = Temporada.objects.create(
-            liga=liga_arg, nombre='2024', estado=Temporada.EstadoTemporada.ACTIVA,
-            modalidad=Temporada.ModalidadCalendario.UNA_VUELTA, fecha_inicio_propuesta=date(2024, 1, 28)
-        )
-        temporada_2024_mls = Temporada.objects.create(
-            liga=liga_mls, nombre='2024', estado=Temporada.EstadoTemporada.ACTIVA,
-            modalidad=Temporada.ModalidadCalendario.DOBLE_VUELTA, fecha_inicio_propuesta=date(2024, 2, 21)
-        )
-        temporada_ap24_mx = Temporada.objects.create(
-            liga=liga_mx, nombre='Apertura 2024', estado=Temporada.EstadoTemporada.ACTIVA,
-            modalidad=Temporada.ModalidadCalendario.UNA_VUELTA, fecha_inicio_propuesta=date(2024, 7, 5)
-        )
+        return {
+            '2425_laliga': Temporada.objects.create(
+                liga=ligas['laliga'], nombre='2024-2025', estado=Temporada.EstadoTemporada.PLANEADA,
+                modalidad=Temporada.ModalidadCalendario.DOBLE_VUELTA, fecha_inicio_propuesta=date(2024, 8, 16)
+            ),
+            '2024_arg': Temporada.objects.create(
+                liga=ligas['arg'], nombre='2024', estado=Temporada.EstadoTemporada.ACTIVA,
+                modalidad=Temporada.ModalidadCalendario.UNA_VUELTA, fecha_inicio_propuesta=date(2024, 1, 28)
+            ),
+            '2024_mls': Temporada.objects.create(
+                liga=ligas['mls'], nombre='2024', estado=Temporada.EstadoTemporada.ACTIVA,
+                modalidad=Temporada.ModalidadCalendario.DOBLE_VUELTA, fecha_inicio_propuesta=date(2024, 2, 21)
+            ),
+            'ap24_mx': Temporada.objects.create(
+                liga=ligas['mx'], nombre='Apertura 2024', estado=Temporada.EstadoTemporada.ACTIVA,
+                modalidad=Temporada.ModalidadCalendario.UNA_VUELTA, fecha_inicio_propuesta=date(2024, 7, 5)
+            ),
+        }
 
-        # 4. Sedes
+    def _create_sedes(self):
         self.stdout.write("Creando Sedes...")
-        sedes = {
-            # Sedes existentes
-            'bernabeu': Sede.objects.create(nombre='Santiago Bernabéu', ciudad='Madrid', direccion='Av. de Concha Espina, 1', activa=True),
-            'monumental': Sede.objects.create(nombre='Estadio Monumental', ciudad='Buenos Aires', direccion='Av. Pres. Figueroa Alcorta 7597', activa=True),
-            'dignity': Sede.objects.create(nombre='Dignity Health Sports Park', ciudad='Carson', direccion='18400 Avalon Blvd', activa=True),
-            'chase': Sede.objects.create(nombre='Chase Stadium', ciudad='Fort Lauderdale', direccion='1350 NW 55th St', activa=True),
-
-            # Sedes Liga MX
-            'ciudad_deportes': Sede.objects.create(nombre='Estadio Ciudad de los Deportes', ciudad='Ciudad de México', direccion='C. Indiana 255', activa=True),
-            'jalisco': Sede.objects.create(nombre='Estadio Jalisco', ciudad='Guadalajara', direccion='C. 7 Colinas 1772', activa=True),
-            'alfonso_lastras': Sede.objects.create(nombre='Estadio Alfonso Lastras Ramírez', ciudad='San Luis Potosí', direccion='C. Zenith 105', activa=True),
-            'olimpico_juarez': Sede.objects.create(nombre='Estadio Olímpico Benito Juárez', ciudad='Ciudad Juárez', direccion='Av. Heroico Colegio Militar s/n', activa=True),
-            'akron': Sede.objects.create(nombre='Estadio Akron', ciudad='Zapopan', direccion='C. Cto. JVC 2800', activa=True),
-            'leon': Sede.objects.create(nombre='Estadio León', ciudad='León', direccion='Blvd. Adolfo López Mateos 1810', activa=True),
-            'el_encanto': Sede.objects.create(nombre='Estadio El Encanto', ciudad='Mazatlán', direccion='Av. Múnich s/n', activa=True),
-            'bbva': Sede.objects.create(nombre='Estadio BBVA', ciudad='Guadalupe', direccion='Av. Pablo Livas 2011', activa=True),
-            'victoria': Sede.objects.create(nombre='Estadio Victoria', ciudad='Aguascalientes', direccion='C. Manuel Zavala Madrigal 101', activa=True),
-            'hidalgo': Sede.objects.create(nombre='Estadio Hidalgo', ciudad='Pachuca', direccion='Blvd. Felipe Ángeles s/n', activa=True),
-            'cuauhtemoc': Sede.objects.create(nombre='Estadio Cuauhtémoc', ciudad='Puebla', direccion='Calz. Ignacio Zaragoza 666', activa=True),
-            'corregidora': Sede.objects.create(nombre='Estadio Corregidora', ciudad='Querétaro', direccion='Av. de las Torres s/n', activa=True),
-            'tsm_corona': Sede.objects.create(nombre='Estadio TSM Corona', ciudad='Torreón', direccion='Carretera Torreón - San Pedro km 7', activa=True),
-            'universitario': Sede.objects.create(nombre='Estadio Universitario', ciudad='San Nicolás de los Garza', direccion='C. Pedro de Alba s/n', activa=True),
-            'caliente': Sede.objects.create(nombre='Estadio Caliente', ciudad='Tijuana', direccion='Blvd. Agua Caliente 12027', activa=True),
-            'nemesio_diez': Sede.objects.create(nombre='Estadio Nemesio Díez', ciudad='Toluca', direccion='Av. Constituyentes Pte. 1000', activa=True),
-            'olimpico_universitario': Sede.objects.create(nombre='Estadio Olímpico Universitario', ciudad='Ciudad de México', direccion='Av. de los Insurgentes Sur s/n', activa=True),
+        sedes_data = {
+            'bernabeu': ('Santiago Bernabéu', 'Madrid', 'Av. de Concha Espina, 1'),
+            'monumental': ('Estadio Monumental', 'Buenos Aires', 'Av. Pres. Figueroa Alcorta 7597'),
+            'dignity': ('Dignity Health Sports Park', 'Carson', '18400 Avalon Blvd'),
+            'chase': ('Chase Stadium', 'Fort Lauderdale', '1350 NW 55th St'),
+            'ciudad_deportes': ('Estadio Ciudad de los Deportes', 'Ciudad de México', 'C. Indiana 255'),
+            'jalisco': ('Estadio Jalisco', 'Guadalajara', 'C. 7 Colinas 1772'),
+            'alfonso_lastras': ('Estadio Alfonso Lastras Ramírez', 'San Luis Potosí', 'C. Zenith 105'),
+            'olimpico_juarez': ('Estadio Olímpico Benito Juárez', 'Ciudad Juárez', 'Av. Heroico Colegio Militar s/n'),
+            'akron': ('Estadio Akron', 'Zapopan', 'C. Cto. JVC 2800'),
+            'leon': ('Estadio León', 'León', 'Blvd. Adolfo López Mateos 1810'),
+            'el_encanto': ('Estadio El Encanto', 'Mazatlán', 'Av. Múnich s/n'),
+            'bbva': ('Estadio BBVA', 'Guadalupe', 'Av. Pablo Livas 2011'),
+            'victoria': ('Estadio Victoria', 'Aguascalientes', 'C. Manuel Zavala Madrigal 101'),
+            'hidalgo': ('Estadio Hidalgo', 'Pachuca', 'Blvd. Felipe Ángeles s/n'),
+            'cuauhtemoc': ('Estadio Cuauhtémoc', 'Puebla', 'Calz. Ignacio Zaragoza 666'),
+            'corregidora': ('Estadio Corregidora', 'Querétaro', 'Av. de las Torres s/n'),
+            'tsm_corona': ('Estadio TSM Corona', 'Torreón', 'Carretera Torreón - San Pedro km 7'),
+            'universitario': ('Estadio Universitario', 'San Nicolás de los Garza', 'C. Pedro de Alba s/n'),
+            'caliente': ('Estadio Caliente', 'Tijuana', 'Blvd. Agua Caliente 12027'),
+            'nemesio_diez': ('Estadio Nemesio Díez', 'Toluca', 'Av. Constituyentes Pte. 1000'),
+            'olimpico_universitario': ('Estadio Olímpico Universitario', 'Ciudad de México', 'Av. de los Insurgentes Sur s/n'),
         }
+        sedes = {}
+        for key, (nombre, ciudad, direccion) in sedes_data.items():
+            sedes[key] = Sede.objects.create(nombre=nombre, ciudad=ciudad, direccion=direccion, activa=True)
+        return sedes
 
-        # 5. Equipos
+    def _create_arbitros(self):
+        self.stdout.write("Creando Árbitros...")
+        nombres = ['Adonai', 'César Arturo', 'Marco Antonio', 'Fernando', 'Luis Enrique', 'Óscar']
+        apellidos = ['Escobedo', 'Ramos', 'Ortiz', 'Guerrero', 'Santander', 'Macías']
+        arbitros = []
+        for i in range(len(nombres)):
+            arbitros.append(Arbitro.objects.create(
+                nombre=nombres[i],
+                apellido_paterno=apellidos[i],
+                fecha_nacimiento=date(random.randint(1975, 1990), random.randint(1, 12), random.randint(1, 28)),
+                activo=True
+            ))
+        return arbitros
+
+    def _create_equipos(self, federaciones):
         self.stdout.write("Creando Equipos...")
-        equipos = {
-            # Equipos existentes
-            'rm': Equipo.objects.create(nombre='Real Madrid', federacion=federacion_uefa, activo=True),
-            'river': Equipo.objects.create(nombre='River Plate', federacion=federacion_conmebol, activo=True),
-            'galaxy': Equipo.objects.create(nombre='LA Galaxy', federacion=federacion_concacaf, activo=True),
-            'miami': Equipo.objects.create(nombre='Inter Miami CF', federacion=federacion_concacaf, activo=True),
-
-            # Equipos Liga MX
-            'america': Equipo.objects.create(nombre='Club América', federacion=federacion_concacaf, activo=True),
-            'atlas': Equipo.objects.create(nombre='Atlas', federacion=federacion_concacaf, activo=True),
-            'san_luis': Equipo.objects.create(nombre='Atlético de San Luis', federacion=federacion_concacaf, activo=True),
-            'cruz_azul': Equipo.objects.create(nombre='Cruz Azul', federacion=federacion_concacaf, activo=True),
-            'juarez': Equipo.objects.create(nombre='FC Juárez', federacion=federacion_concacaf, activo=True),
-            'chivas': Equipo.objects.create(nombre='Guadalajara', federacion=federacion_concacaf, activo=True),
-            'leon': Equipo.objects.create(nombre='León', federacion=federacion_concacaf, activo=True),
-            'mazatlan': Equipo.objects.create(nombre='Mazatlán FC', federacion=federacion_concacaf, activo=True),
-            'monterrey': Equipo.objects.create(nombre='Monterrey', federacion=federacion_concacaf, activo=True),
-            'necaxa': Equipo.objects.create(nombre='Necaxa', federacion=federacion_concacaf, activo=True),
-            'pachuca': Equipo.objects.create(nombre='Pachuca', federacion=federacion_concacaf, activo=True),
-            'puebla': Equipo.objects.create(nombre='Puebla', federacion=federacion_concacaf, activo=True),
-            'queretaro': Equipo.objects.create(nombre='Querétaro', federacion=federacion_concacaf, activo=True),
-            'santos': Equipo.objects.create(nombre='Santos Laguna', federacion=federacion_concacaf, activo=True),
-            'tigres': Equipo.objects.create(nombre='Tigres UANL', federacion=federacion_concacaf, activo=True),
-            'tijuana': Equipo.objects.create(nombre='Club Tijuana', federacion=federacion_concacaf, activo=True),
-            'toluca': Equipo.objects.create(nombre='Toluca', federacion=federacion_concacaf, activo=True),
-            'pumas': Equipo.objects.create(nombre='UNAM', federacion=federacion_concacaf, activo=True),
+        equipos_data = {
+            'rm': ('Real Madrid', federaciones['uefa']),
+            'river': ('River Plate', federaciones['conmebol']),
+            'galaxy': ('LA Galaxy', federaciones['concacaf']),
+            'miami': ('Inter Miami CF', federaciones['concacaf']),
+            'america': ('Club América', federaciones['concacaf']),
+            'atlas': ('Atlas', federaciones['concacaf']),
+            'san_luis': ('Atlético de San Luis', federaciones['concacaf']),
+            'cruz_azul': ('Cruz Azul', federaciones['concacaf']),
+            'juarez': ('FC Juárez', federaciones['concacaf']),
+            'chivas': ('Guadalajara', federaciones['concacaf']),
+            'leon': ('León', federaciones['concacaf']),
+            'mazatlan': ('Mazatlán FC', federaciones['concacaf']),
+            'monterrey': ('Monterrey', federaciones['concacaf']),
+            'necaxa': ('Necaxa', federaciones['concacaf']),
+            'pachuca': ('Pachuca', federaciones['concacaf']),
+            'puebla': ('Puebla', federaciones['concacaf']),
+            'queretaro': ('Querétaro', federaciones['concacaf']),
+            'santos': ('Santos Laguna', federaciones['concacaf']),
+            'tigres': ('Tigres UANL', federaciones['concacaf']),
+            'tijuana': ('Club Tijuana', federaciones['concacaf']),
+            'toluca': ('Toluca', federaciones['concacaf']),
+            'pumas': ('UNAM', federaciones['concacaf']),
         }
+        equipos = {}
+        for key, (nombre, federacion) in equipos_data.items():
+            equipos[key] = Equipo.objects.create(nombre=nombre, federacion=federacion, activo=True)
+        return equipos
 
-        # 6. Jugadores
+    def _create_jugadores(self):
         self.stdout.write("Creando Jugadores...")
-        jugadores = []
         nombres = ['Juan', 'Carlos', 'Luis', 'Miguel', 'Javier', 'Andrés', 'Leo', 'Cris', 'Ney', 'Kylian', 'Santiago', 'Julián', 'Diego', 'Héctor', 'Raúl']
         apellidos = ['García', 'Rodríguez', 'Messi', 'Ronaldo', 'Martínez', 'Hernández', 'López', 'Pérez', 'Mbappé', 'Giménez', 'Quiñones', 'Valdés', 'Herrera', 'Jiménez']
         posiciones = [p[0] for p in Jugador.PosicionJugador.choices]
         
-        for _ in range(500): # Aumentar el pool de jugadores para cubrir todos los equipos
+        jugadores = []
+        for _ in range(500):
             jugadores.append(Jugador.objects.create(
                 nombre=random.choice(nombres),
                 apellido=random.choice(apellidos),
@@ -128,48 +174,51 @@ class Command(BaseCommand):
                 posicion=random.choice(posiciones),
                 activo=True
             ))
+        return jugadores
 
-        # 7. EquipoTemporada (Asociar equipos a temporadas y sedes)
+    def _create_equipos_temporada(self, temporadas, equipos, sedes):
         self.stdout.write("Asociando Equipos a Temporadas...")
-        equipos_temporada = [
-            # Otras ligas
-            EquipoTemporada.objects.create(equipo=equipos['rm'], temporada=temporada_2425_laliga, sede=sedes['bernabeu']),
-            EquipoTemporada.objects.create(equipo=equipos['river'], temporada=temporada_2024_arg, sede=sedes['monumental']),
-            EquipoTemporada.objects.create(equipo=equipos['galaxy'], temporada=temporada_2024_mls, sede=sedes['dignity']),
-            EquipoTemporada.objects.create(equipo=equipos['miami'], temporada=temporada_2024_mls, sede=sedes['chase']),
-            
-            # Liga MX
-            EquipoTemporada.objects.create(equipo=equipos['america'], temporada=temporada_ap24_mx, sede=sedes['ciudad_deportes']),
-            EquipoTemporada.objects.create(equipo=equipos['atlas'], temporada=temporada_ap24_mx, sede=sedes['jalisco']),
-            EquipoTemporada.objects.create(equipo=equipos['san_luis'], temporada=temporada_ap24_mx, sede=sedes['alfonso_lastras']),
-            EquipoTemporada.objects.create(equipo=equipos['cruz_azul'], temporada=temporada_ap24_mx, sede=sedes['ciudad_deportes']),
-            EquipoTemporada.objects.create(equipo=equipos['juarez'], temporada=temporada_ap24_mx, sede=sedes['olimpico_juarez']),
-            EquipoTemporada.objects.create(equipo=equipos['chivas'], temporada=temporada_ap24_mx, sede=sedes['akron']),
-            EquipoTemporada.objects.create(equipo=equipos['leon'], temporada=temporada_ap24_mx, sede=sedes['leon']),
-            EquipoTemporada.objects.create(equipo=equipos['mazatlan'], temporada=temporada_ap24_mx, sede=sedes['el_encanto']),
-            EquipoTemporada.objects.create(equipo=equipos['monterrey'], temporada=temporada_ap24_mx, sede=sedes['bbva']),
-            EquipoTemporada.objects.create(equipo=equipos['necaxa'], temporada=temporada_ap24_mx, sede=sedes['victoria']),
-            EquipoTemporada.objects.create(equipo=equipos['pachuca'], temporada=temporada_ap24_mx, sede=sedes['hidalgo']),
-            EquipoTemporada.objects.create(equipo=equipos['puebla'], temporada=temporada_ap24_mx, sede=sedes['cuauhtemoc']),
-            EquipoTemporada.objects.create(equipo=equipos['queretaro'], temporada=temporada_ap24_mx, sede=sedes['corregidora']),
-            EquipoTemporada.objects.create(equipo=equipos['santos'], temporada=temporada_ap24_mx, sede=sedes['tsm_corona']),
-            EquipoTemporada.objects.create(equipo=equipos['tigres'], temporada=temporada_ap24_mx, sede=sedes['universitario']),
-            EquipoTemporada.objects.create(equipo=equipos['tijuana'], temporada=temporada_ap24_mx, sede=sedes['caliente']),
-            EquipoTemporada.objects.create(equipo=equipos['toluca'], temporada=temporada_ap24_mx, sede=sedes['nemesio_diez']),
-            EquipoTemporada.objects.create(equipo=equipos['pumas'], temporada=temporada_ap24_mx, sede=sedes['olimpico_universitario']),
+        asociaciones = [
+            (equipos['rm'], temporadas['2425_laliga'], sedes['bernabeu']),
+            (equipos['river'], temporadas['2024_arg'], sedes['monumental']),
+            (equipos['galaxy'], temporadas['2024_mls'], sedes['dignity']),
+            (equipos['miami'], temporadas['2024_mls'], sedes['chase']),
+            (equipos['america'], temporadas['ap24_mx'], sedes['ciudad_deportes']),
+            (equipos['atlas'], temporadas['ap24_mx'], sedes['jalisco']),
+            (equipos['san_luis'], temporadas['ap24_mx'], sedes['alfonso_lastras']),
+            (equipos['cruz_azul'], temporadas['ap24_mx'], sedes['ciudad_deportes']),
+            (equipos['juarez'], temporadas['ap24_mx'], sedes['olimpico_juarez']),
+            (equipos['chivas'], temporadas['ap24_mx'], sedes['akron']),
+            (equipos['leon'], temporadas['ap24_mx'], sedes['leon']),
+            (equipos['mazatlan'], temporadas['ap24_mx'], sedes['el_encanto']),
+            (equipos['monterrey'], temporadas['ap24_mx'], sedes['bbva']),
+            (equipos['necaxa'], temporadas['ap24_mx'], sedes['victoria']),
+            (equipos['pachuca'], temporadas['ap24_mx'], sedes['hidalgo']),
+            (equipos['puebla'], temporadas['ap24_mx'], sedes['cuauhtemoc']),
+            (equipos['queretaro'], temporadas['ap24_mx'], sedes['corregidora']),
+            (equipos['santos'], temporadas['ap24_mx'], sedes['tsm_corona']),
+            (equipos['tigres'], temporadas['ap24_mx'], sedes['universitario']),
+            (equipos['tijuana'], temporadas['ap24_mx'], sedes['caliente']),
+            (equipos['toluca'], temporadas['ap24_mx'], sedes['nemesio_diez']),
+            (equipos['pumas'], temporadas['ap24_mx'], sedes['olimpico_universitario']),
         ]
+        
+        equipos_temporada = []
+        for equipo, temporada, sede in asociaciones:
+            equipos_temporada.append(
+                EquipoTemporada.objects.create(equipo=equipo, temporada=temporada, sede=sede)
+            )
+        return equipos_temporada
 
-        # 8. PlantillaJugador (Crear plantillas)
+    def _create_plantillas(self, equipos_temporada, jugadores):
         self.stdout.write("Creando Plantillas...")
         jugadores_disponibles = list(jugadores)
         
         for et in equipos_temporada:
             dorsales_usados = set()
-            for _ in range(random.randint(18, 25)): # Cada equipo tendrá entre 18 y 25 jugadores
-                if not jugadores_disponibles:
-                    break
+            for _ in range(random.randint(18, 25)):
+                if not jugadores_disponibles: break
                 
-                # Asegurar dorsal único
                 dorsal = random.randint(1, 99)
                 while dorsal in dorsales_usados:
                     dorsal = random.randint(1, 99)
@@ -183,4 +232,44 @@ class Command(BaseCommand):
                     dorsal=dorsal
                 )
 
-        self.stdout.write(self.style.SUCCESS('¡Datos de prueba creados exitosamente!'))
+    def _create_calendario(self, temporadas, arbitros):
+        self.stdout.write("Creando Calendario para Liga MX...")
+        temporada_mx = temporadas['ap24_mx']
+        equipos_mx = list(EquipoTemporada.objects.filter(temporada=temporada_mx))
+        
+        if len(equipos_mx) < 2:
+            self.stdout.write("No hay suficientes equipos en la Liga MX para crear partidos.")
+            return
+
+        fecha_inicio = temporada_mx.fecha_inicio_propuesta or date.today()
+
+        for i in range(1, 18): # 17 Jornadas
+            jornada = Jornada.objects.create(temporada=temporada_mx, numero=i)
+            self.stdout.write(f"  Creando Jornada {i}...")
+            
+            random.shuffle(equipos_mx)
+            equipos_jornada = list(equipos_mx) # Copia para manipular
+
+            for _ in range(len(equipos_mx) // 2): # 9 partidos por jornada
+                if len(equipos_jornada) < 2: break
+                
+                equipo_local = equipos_jornada.pop()
+                equipo_visitante = equipos_jornada.pop()
+
+                # Asignar fecha y hora al partido (ej. cada fin de semana)
+                dias_partido = ((i - 1) * 7) + random.randint(1, 3) # Simula partidos en fin de semana
+                hora_partido = random.choice([17, 19, 21])
+                minuto_partido = random.choice([0, 30])
+                fecha_partido = fecha_inicio + timedelta(days=dias_partido)
+                fecha_hora_partido = datetime.combine(fecha_partido, datetime.min.time()).replace(hour=hora_partido, minute=minuto_partido)
+
+                Partido.objects.create(
+                    jornada=jornada,
+                    equipo_local=equipo_local,
+                    equipo_visitante=equipo_visitante,
+                    sede=equipo_local.sede, # El equipo local juega en su sede
+                    arbitro=random.choice(arbitros),
+                    fecha_hora=fecha_hora_partido,
+                    estado=Partido.EstadoPartido.PROGRAMADO
+                )
+
