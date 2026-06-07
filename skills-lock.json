@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "pmx-specs-driven-development": {
+      "source": "pemex-toolbox/pemex-toolbox-ai-skills",
+      "sourceType": "github",
+      "skillPath": "skills/pmx-specs-driven-development/SKILL.md",
+      "computedHash": "c255ee1915f61aabbbd1c798b4fbedd513c99f0d35ebb0db1985f8997565fcde"
+    }
+  }
+}

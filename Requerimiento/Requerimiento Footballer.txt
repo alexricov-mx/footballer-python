@@ -1,0 +1,34 @@
+Requerimiento Footballer
+
+Como administrador de multiples ligas, requiero una aplicacion web que me permita hacer la gestion de ligas, 
+temporadas y sus partidos por jornadas, ademas de poder llevar el control de los equipos y los jugadores que 
+corforman los equipos.
+
+Como administrador general, podre dar de alta ligas.
+Y administradores de ligas, podran dar de alta temporadas, asi como poder gestionar equipos y jugadores.
+como arbitros, pueden registrar los resultados de los partidos que se llevan acabo cada jornada.
+
+Se requiere un modulo para que se puedan crear ligas, temporadas, equipos y jugadores. 
+La gestion debe permitir crear, editar, habilitar o deshabilitar registros.
+
+Se requiere el modulo de gestion de cada temporada, en el que se debe poder hacer el calendario de partidos de
+una temporada, es decir, el calendario debe tener la relacion de los partidos que se deben dar en cada jornada
+indicando la fecha. Se debe poder tener un switch o indicador para permitir que los equipos se encuentren a 
+1 partido, o a 2 pertidos en el que un equipo primero es equipo loca y forzosamente en el 2do sera visitante.
+En los partidos de futbol, Equipo 1 vs Equipo 2, el Equipo 1 se indica como Local y el Equipo 2 se indica como
+visitante, es decir, Local vs Visitante.
+
+Se debe tener un modulo de consulta, es decir, que por temporada, podamos ver el progreso de los partidos, 
+es decir de las jornadas, teniendo la capacidad de registrar los jugadores que anotan en cada partido.
+
+Se debera tener la consulta de la tabla general por temporada, de manera ordenada por puntos, es decir, 
+un resultado como victoria, es decir partido ganado, vale 3 puntos.
+un resultado como empate, es decir, partido empatado, vale 1 punto.
+un resultado coomo derrota, es decir, pertido perdido, no suma puntos.
+
+Es decir, Local vs Visitante, podriamos indicarlo como Guadalajara 5 - 2 America, lo que se traduciria en que 
+Guadalajara sumaria 3 puntos y el America no sumaria, esto se hacer por cada partido de la jornada en una
+temporada.
+
+---
+

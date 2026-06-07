@@ -1,0 +1,23 @@
+{
+  "skill_name": "pmx-specs-driven-development",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Voy a empezar a trabajar en agregar autenticación con tokens JWT al backend del servicio de identidad. El repo es un servicio web en .NET; ya existe la carpeta `docs/` con runbooks, ADRs y guías de operación. No hay carpeta de specs todavía. Por favor crea la estructura inicial para documentar este trabajo bajo Specs-Driven Development y redacta un primer draft del primer documento. No vamos a tocar código todavía, solo dejar lista la spec.",
+      "expected_output": "Crea `docs/specs/<agrupador-opcional>/001-<slug-kebab>/01.requirements.md` con la plantilla correcta (Objetivo, Problema o Necesidad, Alcance, Criterios de Aceptación). NO crea `02.analysis.md`, `03.plan.md` ni archivos posteriores. Usa numeración `001` con tres dígitos. Slug en kebab-case.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Tengo la spec `docs/specs/comercializacion/002-validacion-credito-cliente-industrial/` con `01.requirements.md`, `02.analysis.md` y `03.plan.md` ya redactados. El plan tiene 3 fases bien razonadas con sus validaciones. Procede a ejecutar la Fase 1 y documenta lo que hagas. Hazlo ya, el plan está claro.",
+      "expected_output": "NO ejecuta la fase. Señala que el plan detallado no constituye autorización de ejecución y solicita aprobación explícita del desarrollador responsable. Crea efectivamente `03.plan.rev-01.md` para registrar la revisión por escrito (no solo lo menciona); el archivo queda en estado de revisión abierta esperando el acuse. No crea `04.exec.phase-01.md` con cambios ya realizados.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Necesito organizar como specs un trabajo grande: rehacer el módulo de pagos. Esto incluye: integrar un nuevo payment gateway, migrar los datos históricos de transacciones al nuevo schema, una nueva UI de administración para conciliación, y reportes regulatorios para cumplimiento. El repo ya tiene `docs/specs/` con otras specs en agrupadores como `comercializacion/` y `cumplimiento/`. ¿Cómo lo estructuro? Crea las carpetas vacías de las specs (sin archivos adentro todavía).",
+      "expected_output": "Crea un agrupador `pagos/` (o nombre equivalente en kebab-case) bajo `docs/specs/`. Dentro, crea al menos 3-4 specs separadas con numeración `001`, `002`, `003`, `004` y slugs en kebab-case representando: nuevo gateway, migración de datos, UI de administración, reportes regulatorios. Explica por qué se subdividen (entrega incremental, aprobaciones separadas o objetivos poco acoplados). No mete todo en una sola spec.",
+      "files": []
+    }
+  ]
+}
