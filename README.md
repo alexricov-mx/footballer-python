@@ -32,17 +32,44 @@ El proyecto utiliza PostgreSQL en un contenedor de Podman.
 
 ```bash
 # Levanta el contenedor de la base de datos en segundo plano
-podman-compose up -d
+podman compose up -d
+podman compose down
+podman compose logs -f
+podman compose ps
 ```
 
-Puedes verificar que el contenedor esté corriendo con `podman-compose ps`.
+en caso que falle, bajamos el contenedor
+```bash
+podman compose -f docker-compose.yml down
+```
+
+Eliminamos el volumen
+```bash
+podman volume rm footballer-python_postgres-data
+```
+
+Verificamos que no este el volumen
+```bash
+podman volume ls
+```
+
+Recreamos el contenedor
+```bash
+podman compose -f docker-compose.yml up -d
+```
+
+### Verifica que quedó correctamente
+Entra al contenedor:
+```bash
+podman exec -it footballer_postgres psql -U footballer_user -d footballer_db
+```
 
 ### 2. Configuración del Entorno de Python
 
 1.  **Crea y activa el entorno virtual:**
 
     ```bash
-    # Crear el entorno virtual (si no existe)
+     # Crear el entorno virtual (si no existe)
     python -m venv .venv
 
     # Activar en Windows (PowerShell)
@@ -55,6 +82,13 @@ Puedes verificar que el contenedor esté corriendo con `podman-compose ps`.
 2.  **Instala las dependencias:**
 
     ```bash
+    # Actualiza pip
+    python -m pip install --upgrade pip
+    
+    # Instala Django
+    pip install django
+
+    # Instala librerias
     pip install -r requirements.txt
     ```
 
